@@ -1,0 +1,32 @@
+{
+  "name": "single-api (workspace)",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "gateway",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.analysis.extraPaths": [
+          "/workspace/app",
+          "/workspace/app/aggregator",
+          "/workspace/app/gateway"
+        ],
+        "python.analysis.diagnosticMode": "workspace"
+      }
+    }
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind"
+  ],
+  "remoteEnv": {
+    "PYTHONPATH": "/workspace/app"
+  },
+  "postCreateCommand": "pip install --no-cache-dir -r /workspace/app/gateway/requirements.txt && pip install --no-cache-dir -r /workspace/app/aggregator/requirements.txt"
+}

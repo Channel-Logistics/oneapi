@@ -1,0 +1,42 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: pass
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  gateway:
+    build:
+      context: ./gateway
+    environment:
+      AMQP_URL: ${AMQP_URL:-amqp://user:pass@rabbitmq:5672}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
+  aggregator:
+    build:
+      context: ./aggregator
+    environment:
+      AMQP_URL: ${AMQP_URL:-amqp://user:pass@rabbitmq:5672}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+    ports:
+      - "3000:80"
