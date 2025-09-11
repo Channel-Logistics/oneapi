@@ -78,13 +78,15 @@ async def sse(task_id: str):
                             evt = {"type": "update", "raw": rmq.body.decode("utf-8", "ignore")}
                         await inbox.put(evt)
                         # after completion, enqueue sentinel then stop the pump
-                        if evt.get("type") == "task.complete":
+                        if evt.get("type") in ("task.complete", "task.failed"):
                             await inbox.put({"type": "__end__"})
                             break
         finally:
             stop.set()
 
     pump_task = asyncio.create_task(pump_from_rmq())
+
+    # await inbox.put({"type": "task.started", "taskId": task_id})
 
     async def event_gen():
         try:
@@ -96,7 +98,7 @@ async def sse(task_id: str):
                 # Map evt to SSE {event, data}
                 yield {
                     "event": evt.get("type", "provider.update"),
-                    "data": evt,
+                    "data": json.dumps(evt),
                 }
         finally:
             try:
@@ -116,6 +118,8 @@ async def sse(task_id: str):
     resp.headers["Connection"] = "keep-alive"
     resp.headers["X-Accel-Buffering"] = "no"
     return resp
+
+    
 @app.get("/health")
 def health():
     return {"ok": True}
