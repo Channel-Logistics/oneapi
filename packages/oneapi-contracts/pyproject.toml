@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contracts"
+version = "0.1.0"
+description = "Shared Pydantic contracts (DTOs/Enums) for OneAPI"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["contracts*"]
