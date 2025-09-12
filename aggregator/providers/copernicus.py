@@ -1,20 +1,23 @@
-# providers/copernicus.py
-import httpx
-from .base import BaseProvider
 import logging
+import os
 
+import httpx
+from dotenv import load_dotenv
+from logging_config import setup_logging
+
+from .base import BaseProvider
+
+load_dotenv()
+setup_logging()
 logger = logging.getLogger("Copernicus")
+
 
 class CopernicusProvider(BaseProvider):
     name = "Copernicus"
-    stac_url = "https://stac.dataspace.copernicus.eu/v1/search"
+    stac_url = os.getenv("COPERNICUS_URL")
 
     async def search_archive(self, start_date, end_date, bbox):
-        payload = {
-            "bbox": bbox,
-            "datetime": f"{start_date}/{end_date}",
-            "limit": 5
-        }
+        payload = {"bbox": bbox, "datetime": f"{start_date}/{end_date}", "limit": 5}
 
         logger.info(f"[Copernicus] Searching archive with payload={payload}")
 

@@ -1,20 +1,26 @@
-# app/providers/base.py
 import abc
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 
 class BaseProvider(abc.ABC):
     name: str
 
     @abc.abstractmethod
-    async def search_archive(self, start_date: str, end_date: str, bbox: List[float]) -> List[Dict[str, Any]]:
+    async def search_archive(
+        self, start_date: str, end_date: str, bbox: List[float]
+    ) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def search_feasibility(self, start_date: str, end_date: str, geometry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def search_feasibility(
+        self, start_date: str, end_date: str, geometry: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def create_task(self, opportunity: Dict[str, Any], constraints: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_task(
+        self, opportunity: Dict[str, Any], constraints: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Schedule a new collection task based on feasibility opportunity."""
         raise NotImplementedError
 
@@ -34,5 +40,5 @@ class BaseProvider(abc.ABC):
             "metadata": {
                 "cloud_cover": props.get("eo:cloud_cover"),
                 "platform": props.get("platform"),
-            }
+            },
         }

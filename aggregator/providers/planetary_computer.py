@@ -1,14 +1,21 @@
-# providers/planetary.py
+import logging
+import os
+
 import httpx
 import planetary_computer
-from .base import BaseProvider
-import logging
+from dotenv import load_dotenv
+from logging_config import setup_logging
 
+from .base import BaseProvider
+
+load_dotenv()
+setup_logging()
 logger = logging.getLogger("PlanetaryProvider")
+
 
 class PlanetaryComputerProvider(BaseProvider):
     name = "PlanetaryComputer"
-    stac_url = "https://planetarycomputer.microsoft.com/api/stac/v1/search"
+    stac_url = os.getenv("PLANETARY_COMPUTER_URL")
 
     async def search_archive(self, start_date, end_date, bbox, mode="archive"):
         # Here we explicitly list major collections PC hosts (EO + SAR)
@@ -16,14 +23,14 @@ class PlanetaryComputerProvider(BaseProvider):
             "sentinel-2-l2a",
             "landsat-8-c2-l2",
             "landsat-9-c2-l2",
-            "sentinel-1-grd"
+            "sentinel-1-grd",
         ]
 
         payload = {
             "collections": collections,
             "bbox": bbox,
             "datetime": f"{start_date}/{end_date}",
-            "limit": 5
+            "limit": 5,
         }
 
         logger.info(f"[PlanetaryComputer] Searching archive with payload={payload}")
@@ -45,7 +52,7 @@ class PlanetaryComputerProvider(BaseProvider):
             results.append(self.format_feature(feat, signed_assets=signed_assets))
 
         return results
-    
+
     async def search_feasibility(self, *args, **kwargs):
         return []  # Not supported
 

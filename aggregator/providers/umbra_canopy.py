@@ -1,15 +1,22 @@
-# providers/umbra.py
-import httpx
-import logging
-from .base import BaseProvider
 import asyncio
+import logging
+import os
 
+import httpx
+from dotenv import load_dotenv
+from logging_config import setup_logging
+
+from .base import BaseProvider
+
+load_dotenv()
+setup_logging()
 logger = logging.getLogger("UmbraProvider")
+
 
 class UmbraProvider(BaseProvider):
     name = "Umbra"
-    # base_url = "https://api.canopy.umbra.space"
-    base_url = "https://api.canopy.prod.umbra-sandbox.space"
+    # base_url = os.getenv("UMBRA_URL_PROD")
+    base_url = os.getenv("UMBRA_URL_SANDBOX")
 
     def __init__(self, token: str):
         if not token:
@@ -30,7 +37,9 @@ class UmbraProvider(BaseProvider):
         logger.info(f"[Umbra] Searching archive bbox={bbox}")
 
         async with httpx.AsyncClient() as client:
-            resp = await client.post(url, headers=self.headers, json=payload, timeout=60)
+            resp = await client.post(
+                url, headers=self.headers, json=payload, timeout=60
+            )
             resp.raise_for_status()
             return resp.json().get("features", [])
 
@@ -47,7 +56,7 @@ class UmbraProvider(BaseProvider):
                 "grazingAngleMinDegrees": 30,
                 "grazingAngleMaxDegrees": 70,
                 "targetAzimuthAngleStartDegrees": 0,
-                "targetAzimuthAngleEndDegrees": 360
+                "targetAzimuthAngleEndDegrees": 360,
             },
             "windowStartAt": start_date,
             "windowEndAt": end_date,
@@ -56,10 +65,12 @@ class UmbraProvider(BaseProvider):
         logger.info(f"[Umbra] Checking feasibility for {geometry}")
 
         async with httpx.AsyncClient() as client:
-            resp = await client.post(url, headers=self.headers, json=payload, timeout=60)
+            resp = await client.post(
+                url, headers=self.headers, json=payload, timeout=60
+            )
             resp.raise_for_status()
             feas = resp.json()
-        
+
         feas_id = feas["id"]
 
         # Poll until completed
@@ -81,7 +92,9 @@ class UmbraProvider(BaseProvider):
 
         raise TimeoutError(f"Feasibility {feas_id} polling timed out")
 
-    async def create_task(self, start_date, end_date, geometry, task_name="Sandbox-Test-Task"):
+    async def create_task(
+        self, start_date, end_date, geometry, task_name="Sandbox-Test-Task"
+    ):
         """
         Create a task from a chosen feasibility opportunity.
         """
@@ -97,7 +110,7 @@ class UmbraProvider(BaseProvider):
                 "grazingAngleMinDegrees": 30,
                 "grazingAngleMaxDegrees": 70,
                 "targetAzimuthAngleStartDegrees": 0,
-                "targetAzimuthAngleEndDegrees": 360
+                "targetAzimuthAngleEndDegrees": 360,
             },
             "windowStartAt": start_date,
             "windowEndAt": end_date,
@@ -107,7 +120,9 @@ class UmbraProvider(BaseProvider):
         logger.info(f"[Umbra] Creating task with payload {payload}")
 
         async with httpx.AsyncClient() as client:
-            resp = await client.post(url, headers=self.headers, json=payload, timeout=60)
+            resp = await client.post(
+                url, headers=self.headers, json=payload, timeout=60
+            )
             resp.raise_for_status()
             return resp.json()
 
