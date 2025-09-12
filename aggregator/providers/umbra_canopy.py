@@ -17,11 +17,11 @@ class UmbraProvider(BaseProvider):
     name = "Umbra"
     # base_url = os.getenv("UMBRA_URL_PROD")
     base_url = os.getenv("UMBRA_URL_SANDBOX")
+    token = os.getenv("UMBRA_TOKEN")
 
-    def __init__(self, token: str):
-        if not token:
+    def __init__(self):
+        if not self.token:
             raise ValueError("Umbra token not provided")
-        self.token = token
         self.headers = {"Authorization": f"Bearer {self.token}"}
 
     async def search_archive(self, start_date, end_date, bbox, limit=10):
