@@ -2,7 +2,7 @@ services:
   gateway:
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./gateway:/app   # live-mount code into container
+      - ./gateway:/app # live-mount code into container
 
   aggregator:
     command: sh -c "pip install watchfiles && watchfiles --filter python 'python worker.py'"
@@ -12,3 +12,8 @@ services:
   client:
     volumes:
       - ./client/index.html:/usr/share/nginx/html/index.html
+
+  notifications:
+    command: sh -c "pip install watchfiles && watchfiles --filter python 'python notifier.py'"
+    volumes:
+      - ./notifications:/app

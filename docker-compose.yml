@@ -5,10 +5,10 @@ services:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: pass
     ports:
-      - "5672:5672"     # AMQP
-      - "15672:15672"   # UI
+      - "5672:5672" # AMQP
+      - "15672:15672" # UI
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -78,5 +78,19 @@ services:
       context: ./client
     ports:
       - "3000:80"
+  notifications:
+    build:
+      context: ./notifications
+    env_file:
+      - ./.env
+    environment:
+      AMQP_URL: ${AMQP_URL:-amqp://user:pass@rabbitmq:5672}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      NOTIFY_EMAIL_FROM: ${NOTIFY_EMAIL_FROM}
+      NOTIFY_EMAIL_TO: ${NOTIFY_EMAIL_TO}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 volumes:
   pgdata:
