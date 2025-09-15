@@ -1,7 +1,7 @@
 from enum import StrEnum
 import uuid
 from typing import Literal, Optional, Dict
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 class OrderProviderStatus(StrEnum):
     PENDING = "pending"
@@ -20,7 +20,13 @@ class OrderProviderBase(BaseModel):
 
 class OrderProviderCreate(OrderProviderBase):
     """Create: order_id and provider_id required; status defaults to 'pending'."""
-    pass
+    
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v):
+        if isinstance(v, str):
+            return OrderProviderStatus(v.lower())
+        return v
 
 class OrderProviderUpdate(BaseModel):
     """Patch: all fields optional."""

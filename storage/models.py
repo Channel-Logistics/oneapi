@@ -18,6 +18,7 @@ pg_order_status = sa.Enum(
     native_enum=True,
     create_type=True,
     validate_strings=True,
+    values_callable=lambda e: [m.value for m in e],
 )
 
 pg_order_provider_status = sa.Enum(
@@ -25,6 +26,7 @@ pg_order_provider_status = sa.Enum(
     name="order_provider_status",
     create_type=False,
     validate_strings=True,
+    values_callable=lambda e: [m.value for m in e],
 )
 
 class Provider(Base):
@@ -54,7 +56,7 @@ class Order(Base):
     start_date: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
     end_date: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
     status: Mapped[OrderStatus] = mapped_column(
-        pg_order_status, nullable=False, server_default=text("'pending'")
+        pg_order_status, nullable=False, default=OrderStatus.PENDING
     )
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
@@ -98,7 +100,7 @@ class OrderProvider(Base):
         UUID(as_uuid=True), ForeignKey("providers.id", ondelete="RESTRICT"), nullable=False
     )
     status: Mapped[OrderProviderStatus] = mapped_column(
-        pg_order_provider_status, nullable=False, server_default=text("'pending'")
+        pg_order_provider_status, nullable=False, default= OrderProviderStatus.PENDING
     )
     last_error: Mapped[str | None] = mapped_column(Text)
     meta: Mapped[dict | None] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))

@@ -44,6 +44,13 @@ class OrderCreate(OrderBase):
         if start and end <= start:
             raise ValueError("end_date must be strictly greater than start_date")
         return end
+    
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v):
+        if isinstance(v, str):
+            return OrderStatus(v.lower())
+        return v
 
 class OrderUpdate(BaseModel):
     """Patch: all optional; forbid unknown fields."""
