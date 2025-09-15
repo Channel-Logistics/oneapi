@@ -10,9 +10,9 @@ from sendgrid.helpers.mail import Mail
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("Notifier")
+logger = logging.getLogger("Notifications")
 
-AMQP_URL = os.getenv("AMQP_URL", "amqp://user:pass@rabbitmq:5672")
+AMQP_URL = os.getenv("AMQP_URL")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 EMAIL_FROM = os.getenv("NOTIFY_EMAIL_FROM")
 EMAIL_TO = os.getenv("NOTIFY_EMAIL_TO")
@@ -62,7 +62,7 @@ async def main():
     await q.bind(ex, routing_key="task.*.complete")
     await q.bind(ex, routing_key="task.*.failed")
 
-    logger.info("📧 Notifications worker started, waiting for task events...")
+    logger.info("📧 Notifications worker started, waiting for orders...")
 
     async with q.iterator() as queue_iter:
         async for msg in queue_iter:
