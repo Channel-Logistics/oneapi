@@ -12,7 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .db import Base
 from contracts import OrderStatus, OrderProviderStatus
 
-pg_order_status = sa.Enum(
+pg_order_status = sa.Enum(  
     OrderStatus,
     name="order_status",
     native_enum=True,
