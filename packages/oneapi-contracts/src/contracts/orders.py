@@ -1,29 +1,65 @@
 import uuid
 from datetime import datetime
-from typing import  Literal, List, Tuple, Annotated, TypeAlias, Optional
-from pydantic import BaseModel, Field
+from typing import Annotated, Optional, Tuple, List, Literal
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
+# API-level enum (stringy for stability at the edge)
 OrderStatus = Literal["pending", "processing", "done", "failed"]
 
 Lon = Annotated[float, Field(ge=-180, le=180)]
 Lat = Annotated[float, Field(ge=-90,  le=90)]
+Coordinate = Tuple[Lon, Lat]  # keep if you’ll use it elsewhere
+BBox = Annotated[List[float], Field(min_length=4, max_length=4)]  # [minLon,minLat,maxLon,maxLat]
 
-Coordinate: TypeAlias = Tuple[Lon, Lat]
+class OrderBase(BaseModel):
+    """Shared read/write fields (write paths may override requiredness)."""
+    model_config = ConfigDict(extra='forbid')  # fail on unknown fields
 
-class OrderCreate(BaseModel):
-    bbox: Optional[List[float]] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    status: OrderStatus = "pending"
+    bbox: BBox
+    start_date: datetime
+    end_date: datetime
+    status: OrderStatus = "pending"  # default at the edge
 
-class OrderRead(OrderCreate):
-    id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
+    @field_validator("bbox")
+    @classmethod
+    def bbox_order(cls, v: Optional[List[float]]):
+        if v is None:
+            return v
+        min_lon, min_lat, max_lon, max_lat = v
+        if not (min_lon < max_lon and min_lat < max_lat):
+            raise ValueError("bbox must be [minLon, minLat, maxLon, maxLat] with min < max")
+        return v
+
+class OrderCreate(OrderBase):
+    """Create requires bbox, start_date, end_date; status still defaults to 'pending'."""
+
+    @field_validator("end_date")
+    @classmethod
+    def end_after_start(cls, end: datetime, info):
+        start = info.data.get("start_date")
+        if start and end <= start:
+            raise ValueError("end_date must be strictly greater than start_date")
+        return end
 
 class OrderUpdate(BaseModel):
-    bbox: Optional[List[float]] = None
+    """Patch: all optional; forbid unknown fields."""
+    model_config = ConfigDict(extra='forbid')
+    bbox: Optional[BBox] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     status: Optional[OrderStatus] = None
 
+    @field_validator("end_date")
+    @classmethod
+    def end_after_start_if_both(cls, end: Optional[datetime], info):
+        start = info.data.get("start_date")
+        if start and end and end <= start:
+            raise ValueError("end_date must be strictly greater than start_date")
+        return end
+
+class OrderRead(OrderBase):
+    """Read model; safe to validate from ORM objects."""
+    model_config = ConfigDict(from_attributes=True, extra='ignore')
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
