@@ -1,6 +1,6 @@
 from enum import StrEnum
 import uuid
-from typing import Literal, Optional, Dict
+from typing import Optional, Dict
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 class OrderProviderStatus(StrEnum):

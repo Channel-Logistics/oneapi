@@ -1,9 +1,9 @@
-from .order_provider import  OrderProviderRead, OrderProviderCreate, OrderProviderUpdate
+from .order_provider import  OrderProviderRead, OrderProviderCreate, OrderProviderUpdate, OrderProviderStatus
 from .providers import ProviderCreate, ProviderBase, ProviderRead, ProviderUpdate
 from .orders import  OrderCreate, OrderRead, OrderUpdate, OrderStatus
 
 __all__ = [
-    "OrderProviderRead", "OrderProviderCreate", "OrderProviderUpdate",
+    "OrderProviderRead", "OrderProviderCreate", "OrderProviderUpdate", "OrderProviderStatus",
     "ProviderCreate", "ProviderBase", "ProviderRead", "ProviderUpdate",
     "OrderCreate", "OrderRead", "OrderUpdate", "OrderStatus",
 ]
