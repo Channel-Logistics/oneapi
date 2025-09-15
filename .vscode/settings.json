@@ -6,5 +6,12 @@
   },
   "files.associations": {
     "pyproject.toml": "toml"
-  }
+  },
+  "cursorpyright.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none"
+  },
+  "cursorpyright.analysis.extraPaths": [
+    "/app"
+  ],
+  "cursorpyright.analysis.typeCheckingMode": "basic"
 }

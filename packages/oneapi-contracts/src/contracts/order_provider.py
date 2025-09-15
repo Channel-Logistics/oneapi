@@ -1,8 +1,13 @@
+from enum import StrEnum
 import uuid
 from typing import Literal, Optional, Dict
 from pydantic import BaseModel, Field, ConfigDict
 
-OrderProviderStatus = Literal["pending", "processing", "done", "failed"]
+class OrderProviderStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    DONE = "done"
+    FAILED = "failed"
 
 class OrderProviderBase(BaseModel):
     """Shared fields between create/read."""
@@ -10,7 +15,7 @@ class OrderProviderBase(BaseModel):
 
     order_id: uuid.UUID
     provider_id: uuid.UUID
-    status: OrderProviderStatus = "pending"
+    status: OrderProviderStatus = OrderProviderStatus.PENDING
     meta: Dict = Field(default_factory=dict)
 
 class OrderProviderCreate(OrderProviderBase):

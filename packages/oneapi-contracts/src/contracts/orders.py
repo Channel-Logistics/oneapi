@@ -1,10 +1,14 @@
+from enum import StrEnum
 import uuid
 from datetime import datetime
 from typing import Annotated, Optional, Tuple, List, Literal
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
-# API-level enum (stringy for stability at the edge)
-OrderStatus = Literal["pending", "processing", "done", "failed"]
+class OrderStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    DONE = "done"
+    FAILED = "failed"
 
 Lon = Annotated[float, Field(ge=-180, le=180)]
 Lat = Annotated[float, Field(ge=-90,  le=90)]
@@ -18,7 +22,7 @@ class OrderBase(BaseModel):
     bbox: BBox
     start_date: datetime
     end_date: datetime
-    status: OrderStatus = "pending"  # default at the edge
+    status: OrderStatus = OrderStatus.PENDING
 
     @field_validator("bbox")
     @classmethod
