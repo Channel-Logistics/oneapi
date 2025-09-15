@@ -1,7 +1,7 @@
 from enum import StrEnum
 import uuid
 from datetime import datetime
-from typing import Annotated, Optional, Tuple, List, Literal
+from typing import Annotated, Optional, Tuple, List
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 class OrderStatus(StrEnum):
