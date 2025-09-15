@@ -19,26 +19,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
-    order_status = sa.Enum(
-        "pending",
-        "processing",
-        "done",
-        "failed",
-        name="order_status",
-        create_type=False,
-    )
-    order_provider_status = sa.Enum(
-        "pending",
-        "processing",
-        "done",
-        "failed",
-        name="order_provider_status",
-        create_type=False,
-    )
-
-    # --- Enum types ---
-    op.execute("CREATE TYPE order_status AS ENUM ('pending','processing','done','failed');")
-    op.execute("CREATE TYPE order_provider_status AS ENUM ('pending','processing','done','failed');")
+    op.execute("""
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
+        CREATE TYPE order_status AS ENUM ('pending','processing','done','failed');
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_provider_status') THEN
+        CREATE TYPE order_provider_status AS ENUM ('pending','processing','done','failed');
+      END IF;
+    END$$;
+    """)
 
     # --- Tables ---
 
@@ -57,10 +48,15 @@ def upgrade():
     op.create_table(
         "orders",
         sa.Column("id", pg.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("bbox", pg.ARRAY(sa.Numeric()), nullable=True),  # numeric[]; si prefieres double precision[] usa pg.ARRAY(sa.Float())
+        sa.Column("bbox", pg.ARRAY(sa.Numeric()), nullable=True),  # si prefieres double precision[] usa pg.ARRAY(sa.Float())
         sa.Column("start_date", pg.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("end_date", pg.TIMESTAMP(timezone=True), nullable=True),
-        sa.Column("status", sa.Enum(name="order_status", create_type=False), nullable=False, server_default=sa.text("'pending'")),
+        sa.Column(
+            "status",
+            pg.ENUM('pending', 'processing', 'done', 'failed', name="order_status", create_type=False),
+            nullable=False,
+            server_default=sa.text("'pending'")
+        ),
         sa.Column("created_at", pg.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", pg.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
@@ -81,12 +77,17 @@ def upgrade():
         sa.Column("id", pg.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("order_id", pg.UUID(as_uuid=True), sa.ForeignKey("orders.id", ondelete="CASCADE"), nullable=False),
         sa.Column("provider_id", pg.UUID(as_uuid=True), sa.ForeignKey("providers.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("status", sa.Enum(name="order_provider_status", create_type=False), nullable=False, server_default=sa.text("'pending'")),
+        sa.Column(
+            "status",
+            pg.ENUM('pending', 'processing', 'done', 'failed', name="order_provider_status", create_type=False),
+            nullable=False,
+            server_default=sa.text("'pending'")
+        ),
         sa.Column("last_error", sa.Text(), nullable=True),
         sa.Column("meta", pg.JSONB(), nullable=True, server_default=sa.text("'{}'::jsonb")),
     )
 
-    # I
+    # Indexes
     op.create_index("ix_providers_slug", "providers", ["slug"], unique=True)
     op.create_index("ix_events_order_id_created_at", "events", ["order_id", "created_at"])
     op.create_index("ix_order_providers_order_id", "order_providers", ["order_id"])
@@ -98,8 +99,8 @@ def upgrade():
         CREATE OR REPLACE FUNCTION set_updated_at()
         RETURNS TRIGGER AS $$
         BEGIN
-        NEW.updated_at = now();
-        RETURN NEW;
+            NEW.updated_at = now();
+            RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
     """)
