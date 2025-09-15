@@ -10,8 +10,8 @@ Coordinate: TypeAlias = Tuple[Lon, Lat]
 
 class OrderCreate(BaseModel):
     bbox: Annotated[List[Coordinate], Field(min_length=2, max_length=2)]
-    time_start: datetime
-    time_end: datetime
+    start_date: datetime
+    end_date: datetime
 
 class OrderOut(BaseModel):
     id: str
