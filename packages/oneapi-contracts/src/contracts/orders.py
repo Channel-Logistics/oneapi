@@ -12,12 +12,12 @@ class OrderStatus(StrEnum):
 
 Lon = Annotated[float, Field(ge=-180, le=180)]
 Lat = Annotated[float, Field(ge=-90,  le=90)]
-Coordinate = Tuple[Lon, Lat]  # keep if you’ll use it elsewhere
-BBox = Annotated[List[float], Field(min_length=4, max_length=4)]  # [minLon,minLat,maxLon,maxLat]
+Coordinate = Tuple[Lon, Lat]
+BBox = Annotated[List[float], Field(min_length=4, max_length=4)]
 
 class OrderBase(BaseModel):
     """Shared read/write fields (write paths may override requiredness)."""
-    model_config = ConfigDict(extra='forbid')  # fail on unknown fields
+    model_config = ConfigDict(extra='forbid')
 
     bbox: BBox
     start_date: datetime
