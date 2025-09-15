@@ -2,9 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY notifications/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY notifier.py .
+COPY notifications/notifier.py ./notifier.py
 
 CMD ["python", "notifier.py"]

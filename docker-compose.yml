@@ -12,22 +12,24 @@ services:
       interval: 5s
       timeout: 5s
       retries: 30
-
   gateway:
     build:
-      context: ./gateway
+      context: .
+      dockerfile: gateway/Dockerfile
     environment:
       AMQP_URL: ${AMQP_URL:-amqp://user:pass@rabbitmq:5672}
     depends_on:
       rabbitmq:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     ports:
       - "8000:8000"
-
   aggregator:
     build:
-      context: ./aggregator
+      context: .
+      dockerfile: aggregator/Dockerfile
     env_file:
       - ./.env
     environment:
@@ -39,13 +41,14 @@ services:
 
   client:
     build:
-      context: ./client
+      context: .
+      dockerfile: client/Dockerfile
     ports:
       - "3000:80"
-
   notifications:
     build:
-      context: ./notifications
+      context: .
+      dockerfile: notifications/Dockerfile
     env_file:
       - ./.env
     environment:
