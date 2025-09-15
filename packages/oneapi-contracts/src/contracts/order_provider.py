@@ -1,0 +1,33 @@
+import uuid
+from typing import Literal, Optional, Dict
+from pydantic import BaseModel, Field, ConfigDict
+
+OrderProviderStatus = Literal["pending", "processing", "done", "failed"]
+
+class OrderProviderBase(BaseModel):
+    """Shared fields between create/read."""
+    model_config = ConfigDict(extra='forbid')
+
+    order_id: uuid.UUID
+    provider_id: uuid.UUID
+    status: OrderProviderStatus = "pending"
+    meta: Dict = Field(default_factory=dict)
+
+class OrderProviderCreate(OrderProviderBase):
+    """Create: order_id and provider_id required; status defaults to 'pending'."""
+    pass
+
+class OrderProviderUpdate(BaseModel):
+    """Patch: all fields optional."""
+    model_config = ConfigDict(extra='forbid')
+
+    status: Optional[OrderProviderStatus] = None
+    meta: Optional[Dict] = None
+    last_error: Optional[str] = None
+
+class OrderProviderRead(OrderProviderBase):
+    """Read: adds id and error info; safe for ORM validation."""
+    model_config = ConfigDict(from_attributes=True, extra='ignore')
+
+    id: uuid.UUID
+    last_error: Optional[str] = None
