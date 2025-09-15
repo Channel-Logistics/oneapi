@@ -1,6 +1,7 @@
+import uuid
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import List
+from typing import Optional, List
 
 class ProviderBase(BaseModel):
     slug: str = Field(min_length=2, max_length=64)
@@ -8,9 +9,17 @@ class ProviderBase(BaseModel):
     sensor_types: List[str] = []
     active: bool = True
 
-class ProviderCreate(ProviderBase):
-    pass
+class ProviderCreate(BaseModel):
+    slug: str
+    name: str
+    sensor_types: List[str] = Field(default_factory=list)
+    active: bool = True
 
-class ProviderOut(ProviderBase):
-    id: str
+class ProviderRead(ProviderCreate):
+    id: uuid.UUID
     created_at: datetime
+
+class ProviderUpdate(BaseModel):
+    name: Optional[str] = None
+    sensor_types: Optional[List[str]] = None
+    active: Optional[bool] = None

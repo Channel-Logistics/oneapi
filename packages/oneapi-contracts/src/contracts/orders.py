@@ -1,7 +1,9 @@
+import uuid
 from datetime import datetime
-from typing import  List, Tuple, Annotated, TypeAlias
+from typing import  Literal, List, Tuple, Annotated, TypeAlias, Optional
 from pydantic import BaseModel, Field
-from .orders_status import OrderStatus
+
+OrderStatus = Literal["pending", "processing", "done", "failed"]
 
 Lon = Annotated[float, Field(ge=-180, le=180)]
 Lat = Annotated[float, Field(ge=-90,  le=90)]
@@ -9,11 +11,19 @@ Lat = Annotated[float, Field(ge=-90,  le=90)]
 Coordinate: TypeAlias = Tuple[Lon, Lat]
 
 class OrderCreate(BaseModel):
-    bbox: Annotated[List[Coordinate], Field(min_length=2, max_length=2)]
-    start_date: datetime
-    end_date: datetime
+    bbox: Optional[List[float]] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    status: OrderStatus = "pending"
 
-class OrderOut(BaseModel):
-    id: str
-    status: OrderStatus
+class OrderRead(OrderCreate):
+    id: uuid.UUID
     created_at: datetime
+    updated_at: datetime
+
+class OrderUpdate(BaseModel):
+    bbox: Optional[List[float]] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    status: Optional[OrderStatus] = None
+
