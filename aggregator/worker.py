@@ -28,12 +28,10 @@ logger = logging.getLogger("Aggregator")
 
 AMQP_URL = os.getenv("AMQP_URL", "amqp://user:pass@rabbitmq:5672")
 
-CONFIG = {"UMBRA_TOKEN": os.getenv("UMBRA_TOKEN")}
-
 PROVIDERS = [
     CopernicusProvider(),
     PlanetaryComputerProvider(),
-    UmbraProvider(token=CONFIG["UMBRA_TOKEN"]),
+    UmbraProvider(),
 ]
 
 
