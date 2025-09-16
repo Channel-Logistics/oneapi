@@ -1,18 +1,3 @@
-# --- ensure repo root is on sys.path so "import storage" works ---
-import sys
-from pathlib import Path
-
-HERE = Path(__file__).resolve().parent
-# Walk upwards until we find a folder that contains the "storage" package
-for p in [HERE] + list(HERE.parents):
-    if (p / "storage" / "__init__.py").exists():
-        if str(p) not in sys.path:
-            sys.path.insert(0, str(p))  # p is the repo root (parent of "storage")
-        break
-else:
-    raise RuntimeError("Could not find repo root containing the 'storage' package")
-# ----------------------------------------------------------------
-
 from unittest.mock import MagicMock
 import pytest
 import pytest_asyncio

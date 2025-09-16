@@ -9,3 +9,18 @@ version = "0.0.0"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["storage*"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --cov=storage --cov-branch --cov-report=term-missing"
+testpaths = ["storage/tests"]
+python_files = "test_*.py"
+asyncio_mode = "auto"
+markers = [
+    "unit: fast tests with fakes/mocks",
+    "integration: in-proc + Testcontainers", 
+    "e2e: live service via HTTP"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:testcontainers.*",
+    "ignore::DeprecationWarning:testcontainers.core.*"
+]
