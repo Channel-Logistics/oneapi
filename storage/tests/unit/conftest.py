@@ -5,7 +5,6 @@ from httpx import AsyncClient, ASGITransport
 
 from storage.app import create_app
 from storage import db as db_module
-from storage.routers import events as events_router_mod  # the module we test
 
 
 @pytest.fixture
@@ -14,7 +13,7 @@ def mock_session():
 
 
 @pytest_asyncio.fixture
-async def ac(mock_session):
+async def async_client(mock_session):
     """
     In-process FastAPI client with the DB dependency overridden to our mock.
     Useful when we want to drive the route through FastAPI (status codes, etc).
