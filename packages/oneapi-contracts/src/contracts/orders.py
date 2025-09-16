@@ -1,24 +1,28 @@
+from enum import StrEnum
 import uuid
 from datetime import datetime
-from typing import Annotated, Optional, Tuple, List, Literal
+from typing import Annotated, Optional, Tuple, List
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
-# API-level enum (stringy for stability at the edge)
-OrderStatus = Literal["pending", "processing", "done", "failed"]
+class OrderStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    DONE = "done"
+    FAILED = "failed"
 
 Lon = Annotated[float, Field(ge=-180, le=180)]
 Lat = Annotated[float, Field(ge=-90,  le=90)]
-Coordinate = Tuple[Lon, Lat]  # keep if you’ll use it elsewhere
-BBox = Annotated[List[float], Field(min_length=4, max_length=4)]  # [minLon,minLat,maxLon,maxLat]
+Coordinate = Tuple[Lon, Lat]
+BBox = Annotated[List[float], Field(min_length=4, max_length=4)]
 
 class OrderBase(BaseModel):
     """Shared read/write fields (write paths may override requiredness)."""
-    model_config = ConfigDict(extra='forbid')  # fail on unknown fields
+    model_config = ConfigDict(extra='forbid')
 
     bbox: BBox
     start_date: datetime
     end_date: datetime
-    status: OrderStatus = "pending"  # default at the edge
+    status: OrderStatus = OrderStatus.PENDING
 
     @field_validator("bbox")
     @classmethod
@@ -40,6 +44,13 @@ class OrderCreate(OrderBase):
         if start and end <= start:
             raise ValueError("end_date must be strictly greater than start_date")
         return end
+    
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v):
+        if isinstance(v, str):
+            return OrderStatus(v.lower())
+        return v
 
 class OrderUpdate(BaseModel):
     """Patch: all optional; forbid unknown fields."""

@@ -1,8 +1,13 @@
+from enum import StrEnum
 import uuid
-from typing import Literal, Optional, Dict
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, Dict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
-OrderProviderStatus = Literal["pending", "processing", "done", "failed"]
+class OrderProviderStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    DONE = "done"
+    FAILED = "failed"
 
 class OrderProviderBase(BaseModel):
     """Shared fields between create/read."""
@@ -10,12 +15,18 @@ class OrderProviderBase(BaseModel):
 
     order_id: uuid.UUID
     provider_id: uuid.UUID
-    status: OrderProviderStatus = "pending"
+    status: OrderProviderStatus = OrderProviderStatus.PENDING
     meta: Dict = Field(default_factory=dict)
 
 class OrderProviderCreate(OrderProviderBase):
     """Create: order_id and provider_id required; status defaults to 'pending'."""
-    pass
+    
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v):
+        if isinstance(v, str):
+            return OrderProviderStatus(v.lower())
+        return v
 
 class OrderProviderUpdate(BaseModel):
     """Patch: all fields optional."""
