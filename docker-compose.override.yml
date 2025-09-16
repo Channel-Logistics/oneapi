@@ -33,3 +33,5 @@ services:
     command: pytest -v
     volumes:
       - ./notifications:/app
+    environment:
+      - PYTHONPATH=/app
