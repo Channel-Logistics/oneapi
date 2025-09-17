@@ -9,3 +9,15 @@ version = "0.0.0"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["storage*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+

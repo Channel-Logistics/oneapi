@@ -1,26 +1,11 @@
-# --- ensure repo root is on sys.path so "import storage" works ---
-import sys
-from pathlib import Path
-
-HERE = Path(__file__).resolve().parent
-# Walk upwards until we find a folder that contains the "storage" package
-for p in [HERE] + list(HERE.parents):
-    if (p / "storage" / "__init__.py").exists():
-        if str(p) not in sys.path:
-            sys.path.insert(0, str(p))  # p is the repo root (parent of "storage")
-        break
-else:
-    raise RuntimeError("Could not find repo root containing the 'storage' package")
-# ----------------------------------------------------------------
-
 from unittest.mock import MagicMock
+
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
-from storage.app import create_app
 from storage import db as db_module
-from storage.routers import events as events_router_mod  # the module we test
+from storage.app import create_app
 
 
 @pytest.fixture
@@ -34,6 +19,7 @@ async def ac(mock_session):
     In-process FastAPI client with the DB dependency overridden to our mock.
     Useful when we want to drive the route through FastAPI (status codes, etc).
     """
+
     def _override():
         yield mock_session
 

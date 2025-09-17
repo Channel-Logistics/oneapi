@@ -1,20 +1,21 @@
-import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport, Client
-from fastapi.testclient import TestClient
-
 from unittest.mock import MagicMock
 
-from storage.app import create_app
-from storage import db as db_module
-from storage.routers import events as events_router_mod  # the module we test
+import pytest
+import pytest_asyncio
+from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+from storage import db as db_module
+from storage.app import create_app
 from storage.db import Base
+
 
 @pytest.fixture
 def mock_session():
     return MagicMock()
+
 
 @pytest.fixture
 def client(_integration_db):
@@ -33,6 +34,7 @@ async def ac(mock_session):
     In-process FastAPI client with the DB dependency overridden to our mock.
     Useful when we want to drive the route through FastAPI (status codes, etc).
     """
+
     def _override():
         yield mock_session
 
@@ -53,6 +55,7 @@ def _pg_container():
     Session-scoped Postgres container for integration/e2e tests.
     """
     from testcontainers.postgres import PostgresContainer
+
     with PostgresContainer("postgres:16") as pg:
         yield pg
 
@@ -67,7 +70,9 @@ def _integration_db(_pg_container):
     url = url.replace("postgresql+psycopg2", "postgresql+psycopg")
 
     engine = create_engine(url, future=True)
-    TestSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+    TestSessionLocal = sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, future=True
+    )
 
     # Create schema
     Base.metadata.create_all(engine)

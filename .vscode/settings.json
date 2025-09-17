@@ -1,5 +1,7 @@
 {
-  "python.analysis.extraPaths": ["/app"],
+  "python.analysis.extraPaths": [
+    "/app"
+  ],
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.diagnosticSeverityOverrides": {
     "reportMissingImports": "none"
@@ -13,5 +15,13 @@
   "cursorpyright.analysis.extraPaths": [
     "/app"
   ],
-  "cursorpyright.analysis.typeCheckingMode": "basic"
+  "cursorpyright.analysis.typeCheckingMode": "basic",
+  "python.linting.enabled": true,
+  "ruff.enable": true,
+  "ruff.organizeImports": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true,
+    "source.organizeImports": true
+  }
 }

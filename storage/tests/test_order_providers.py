@@ -1,9 +1,17 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 def test_order_providers_crud(client):
     # Create a provider (idempotent on slug)
-    r = client.post("/providers", json={"slug": "prov-tests", "name": "Prov Tests", "sensor_types": [], "active": True})
+    r = client.post(
+        "/providers",
+        json={
+            "slug": "prov-tests",
+            "name": "Prov Tests",
+            "sensor_types": [],
+            "active": True,
+        },
+    )
     if r.status_code == 409:
         r = client.get("/providers?limit=200&offset=0")
         assert r.status_code == 200, r.text
@@ -11,7 +19,15 @@ def test_order_providers_crud(client):
         if provs:
             provider_id = provs[0]["id"]
         else:
-            r = client.post("/providers", json={"slug": "prov-tests-2", "name": "Prov Tests 2", "sensor_types": [], "active": True})
+            r = client.post(
+                "/providers",
+                json={
+                    "slug": "prov-tests-2",
+                    "name": "Prov Tests 2",
+                    "sensor_types": [],
+                    "active": True,
+                },
+            )
             assert r.status_code == 201, r.text
             provider_id = r.json()["id"]
     else:
@@ -32,7 +48,12 @@ def test_order_providers_crud(client):
 
     try:
         # Create order_provider link
-        payload = {"order_id": order_id, "provider_id": provider_id, "status": "pending", "meta": {}}
+        payload = {
+            "order_id": order_id,
+            "provider_id": provider_id,
+            "status": "pending",
+            "meta": {},
+        }
         r = client.post("/order-providers", json=payload)
         assert r.status_code == 201, r.text
         op_obj = r.json()
