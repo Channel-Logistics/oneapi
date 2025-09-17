@@ -8,6 +8,15 @@ services:
     command: sh -c "pip install watchfiles && watchfiles --filter python 'python worker.py'"
     volumes:
       - ./aggregator:/app
+  aggregator-tests:
+    build:
+      context: .
+      dockerfile: aggregator/Dockerfile
+    command: pytest -v
+    volumes:
+      - ./aggregator:/app
+    environment:
+      - PYTHONPATH=/app
 
   client:
     volumes:
@@ -17,3 +26,12 @@ services:
     command: sh -c "pip install watchfiles && watchfiles --filter python 'python notifier.py'"
     volumes:
       - ./notifications:/app
+  notifications-tests:
+    build:
+      context: .
+      dockerfile: notifications/Dockerfile
+    command: pytest -v
+    volumes:
+      - ./notifications:/app
+    environment:
+      - PYTHONPATH=/app
