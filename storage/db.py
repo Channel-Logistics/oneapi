@@ -1,17 +1,28 @@
+from typing import Iterator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .settings import settings
 
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 class Base(DeclarativeBase):
     pass
 
-def get_db():
+
+_engine = create_engine(settings.DATABASE_URL, future=True)
+SessionLocal = sessionmaker(
+    bind=_engine, autoflush=False, autocommit=False, future=True
+)
+
+
+def get_session() -> Iterator[Session]:
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+def get_db() -> Iterator[Session]:
+    yield from get_session()

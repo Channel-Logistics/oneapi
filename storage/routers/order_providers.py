@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import select, and_
-
-from ..db import get_db
-from .. import models
 from contracts import (
-    OrderProviderCreate, OrderProviderRead, OrderProviderUpdate, OrderProviderStatus
+    OrderProviderCreate,
+    OrderProviderRead,
+    OrderProviderStatus,
+    OrderProviderUpdate,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, select
+from sqlalchemy.orm import Session
+
+from .. import models
+from ..db import get_db
 
 router = APIRouter(prefix="/order-providers", tags=["order_providers"])
 
@@ -56,7 +59,9 @@ def get_order_provider(id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{id}", response_model=OrderProviderRead)
-def update_order_provider(id: str, payload: OrderProviderUpdate, db: Session = Depends(get_db)):
+def update_order_provider(
+    id: str, payload: OrderProviderUpdate, db: Session = Depends(get_db)
+):
     obj = db.get(models.OrderProvider, id)
     if not obj:
         raise HTTPException(status_code=404, detail="order_provider not found")

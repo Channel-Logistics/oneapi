@@ -1,8 +1,10 @@
-from enum import StrEnum
 import uuid
 from datetime import datetime
-from typing import Annotated, Optional, Tuple, List
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from enum import StrEnum
+from typing import Annotated, List, Optional, Tuple
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 class OrderStatus(StrEnum):
     PENDING = "pending"
@@ -10,14 +12,17 @@ class OrderStatus(StrEnum):
     DONE = "done"
     FAILED = "failed"
 
+
 Lon = Annotated[float, Field(ge=-180, le=180)]
-Lat = Annotated[float, Field(ge=-90,  le=90)]
+Lat = Annotated[float, Field(ge=-90, le=90)]
 Coordinate = Tuple[Lon, Lat]
 BBox = Annotated[List[float], Field(min_length=4, max_length=4)]
 
+
 class OrderBase(BaseModel):
     """Shared read/write fields (write paths may override requiredness)."""
-    model_config = ConfigDict(extra='forbid')
+
+    model_config = ConfigDict(extra="forbid")
 
     bbox: BBox
     start_date: datetime
@@ -31,8 +36,11 @@ class OrderBase(BaseModel):
             return v
         min_lon, min_lat, max_lon, max_lat = v
         if not (min_lon < max_lon and min_lat < max_lat):
-            raise ValueError("bbox must be [minLon, minLat, maxLon, maxLat] with min < max")
+            raise ValueError(
+                "bbox must be [minLon, minLat, maxLon, maxLat] with min < max"
+            )
         return v
+
 
 class OrderCreate(OrderBase):
     """Create requires bbox, start_date, end_date; status still defaults to 'pending'."""
@@ -44,7 +52,7 @@ class OrderCreate(OrderBase):
         if start and end <= start:
             raise ValueError("end_date must be strictly greater than start_date")
         return end
-    
+
     @field_validator("status", mode="before")
     @classmethod
     def normalize_status(cls, v):
@@ -52,9 +60,11 @@ class OrderCreate(OrderBase):
             return OrderStatus(v.lower())
         return v
 
+
 class OrderUpdate(BaseModel):
     """Patch: all optional; forbid unknown fields."""
-    model_config = ConfigDict(extra='forbid')
+
+    model_config = ConfigDict(extra="forbid")
     bbox: Optional[BBox] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
@@ -68,9 +78,11 @@ class OrderUpdate(BaseModel):
             raise ValueError("end_date must be strictly greater than start_date")
         return end
 
+
 class OrderRead(OrderBase):
     """Read model; safe to validate from ORM objects."""
-    model_config = ConfigDict(from_attributes=True, extra='ignore')
+
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime

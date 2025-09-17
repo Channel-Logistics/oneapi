@@ -1,5 +1,7 @@
-from pydantic_settings import BaseSettings
 from typing import List
+
+from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     APP_NAME: str = "oneapi-storage"
@@ -8,8 +10,9 @@ class Settings(BaseSettings):
     # CORS / security toggles could go here later
     CORS_ORIGINS: List[str] | None = None
     model_config = {
-        "env_file": ".env",   # optional, only if you use a local .env
+        "env_file": ".env",  # optional, only if you use a local .env
         "case_sensitive": False,
     }
+
 
 settings = Settings()

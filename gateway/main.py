@@ -1,7 +1,11 @@
-import asyncio, json, uuid, os
-from fastapi import FastAPI, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+import json
+import os
+import uuid
+
 import aio_pika
+from fastapi import BackgroundTasks, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 AMQP_URL = os.getenv("AMQP_URL", "amqp://user:pass@rabbitmq:5672")
@@ -25,25 +29,35 @@ app.add_middleware(
 amqp_conn: aio_pika.RobustConnection
 amqp_channel: aio_pika.Channel
 
+
 @app.on_event("startup")
 async def startup():
     global amqp_conn, amqp_channel
     amqp_conn = await aio_pika.connect_robust(AMQP_URL)
     amqp_channel = await amqp_conn.channel()
     # declare exchanges (idempotent)
-    await amqp_channel.declare_exchange("tasks", aio_pika.ExchangeType.DIRECT, durable=True)
-    await amqp_channel.declare_exchange("events", aio_pika.ExchangeType.TOPIC, durable=True)
+    await amqp_channel.declare_exchange(
+        "tasks", aio_pika.ExchangeType.DIRECT, durable=True
+    )
+    await amqp_channel.declare_exchange(
+        "events", aio_pika.ExchangeType.TOPIC, durable=True
+    )
+
 
 @app.on_event("shutdown")
 async def shutdown():
     if amqp_conn:
         await amqp_conn.close()
 
+
 async def publish_task(task_id: str, payload: dict):
     ex = await amqp_channel.get_exchange("tasks")
     body = json.dumps({"taskId": task_id, **payload}).encode()
-    await ex.publish(aio_pika.Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
-                     routing_key="search")
+    await ex.publish(
+        aio_pika.Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
+        routing_key="search",
+    )
+
 
 @app.post("/tasks")
 async def create_task(body: dict, bg: BackgroundTasks):
@@ -51,14 +65,17 @@ async def create_task(body: dict, bg: BackgroundTasks):
     bg.add_task(publish_task, task_id, body)
     return {"taskId": task_id, "sseUrl": f"/tasks/{task_id}/events"}
 
+
 @app.get("/tasks/{task_id}/events")
 async def sse(task_id: str):
     ex = await amqp_channel.get_exchange("events")
-    
+
     # exclusive, auto-delete queue for this SSE connection
     queue = await amqp_channel.declare_queue(
         name=f"sse-{task_id}-{uuid.uuid4().hex}",
-        exclusive=True, auto_delete=True, durable=False
+        exclusive=True,
+        auto_delete=True,
+        durable=False,
     )
 
     await queue.bind(ex, routing_key=f"task.{task_id}.#")
@@ -75,7 +92,10 @@ async def sse(task_id: str):
                         try:
                             evt = json.loads(rmq.body)
                         except Exception:
-                            evt = {"type": "update", "raw": rmq.body.decode("utf-8", "ignore")}
+                            evt = {
+                                "type": "update",
+                                "raw": rmq.body.decode("utf-8", "ignore"),
+                            }
                         await inbox.put(evt)
                         # after completion, enqueue sentinel then stop the pump
                         if evt.get("type") in ("task.complete", "task.failed"):
@@ -119,8 +139,7 @@ async def sse(task_id: str):
     resp.headers["X-Accel-Buffering"] = "no"
     return resp
 
-    
+
 @app.get("/health")
 def health():
     return {"ok": True}
-

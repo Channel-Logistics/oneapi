@@ -1,31 +1,94 @@
-# Shared fixtures: HTTP client + wait until /health is up.
+from unittest.mock import MagicMock
 
-import os
-import time
 import pytest
-import httpx
+import pytest_asyncio
+from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from storage import db as db_module
+from storage.app import create_app
+from storage.db import Base
+
+
+@pytest.fixture
+def mock_session():
+    return MagicMock()
+
+
+@pytest.fixture
+def client(_integration_db):
+    """
+    Synchronous in-process FastAPI client for integration tests.
+    Uses real database connections.
+    """
+    app = create_app()
+    with TestClient(app) as client:
+        yield client
+
+
+@pytest_asyncio.fixture
+async def ac(mock_session):
+    """
+    In-process FastAPI client with the DB dependency overridden to our mock.
+    Useful when we want to drive the route through FastAPI (status codes, etc).
+    """
+
+    def _override():
+        yield mock_session
+
+    app = create_app()
+
+    app.dependency_overrides[db_module.get_session] = _override
+    if hasattr(db_module, "get_db"):
+        app.dependency_overrides[db_module.get_db] = _override
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
 
 
 @pytest.fixture(scope="session")
-def base_url() -> str:
-    return os.getenv("STORAGE_BASE_URL", "http://localhost:9000")
+def _pg_container():
+    """
+    Session-scoped Postgres container for integration/e2e tests.
+    """
+    from testcontainers.postgres import PostgresContainer
+
+    with PostgresContainer("postgres:16") as pg:
+        yield pg
 
 
 @pytest.fixture(scope="session")
-def client(base_url: str):
-    with httpx.Client(base_url=base_url, timeout=20) as c:
-        # wait for service to come up (fast retry loop)
-        deadline = time.time() + 10
-        last_err = None
-        while time.time() < deadline:
-            try:
-                r = c.get("/health")
-                if r.status_code == 200:
-                    break
-            except Exception as e:
-                last_err = e
-            time.sleep(0.5)
-        if last_err:
-            # final probe; if it fails, let tests error out with a clear message
-            c.get("/health")
-        yield c
+def _integration_db(_pg_container):
+    """
+    Create a SQLAlchemy engine/session bound to the container and initialize schema,
+    rebinding storage.db module-level engine/session so app dependencies use it.
+    """
+    url = _pg_container.get_connection_url()
+    url = url.replace("postgresql+psycopg2", "postgresql+psycopg")
+
+    engine = create_engine(url, future=True)
+    TestSessionLocal = sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, future=True
+    )
+
+    # Create schema
+    Base.metadata.create_all(engine)
+
+    # Rebind
+    original_engine = getattr(db_module, "_engine", None)
+    original_session_local = getattr(db_module, "SessionLocal", None)
+    db_module._engine = engine
+    db_module.SessionLocal = TestSessionLocal
+
+    try:
+        yield {"engine": engine, "SessionLocal": TestSessionLocal}
+    finally:
+        # Restore and cleanup
+        if original_engine is not None:
+            db_module._engine = original_engine
+        if original_session_local is not None:
+            db_module.SessionLocal = original_session_local
+        Base.metadata.drop_all(engine)
