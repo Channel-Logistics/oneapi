@@ -3,6 +3,18 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./gateway:/app # live-mount code into container
+  gateway-tests:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    command: pytest -v
+    volumes:
+      - ./gateway:/app
+    environment:
+      - PYTHONPATH=/app
+      - AMQP_URL=amqp://user:pass@rabbitmq:5672
+    depends_on:
+      - rabbitmq
 
   aggregator:
     command: sh -c "pip install watchfiles && watchfiles --filter python 'python worker.py'"
@@ -35,3 +47,21 @@ services:
       - ./notifications:/app
     environment:
       - PYTHONPATH=/app
+  storage-test:
+    build:
+      context: .
+      dockerfile: storage/Dockerfile
+      args:
+        ENV: dev
+    volumes:
+      - ./storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DATABASE_URL=postgresql+psycopg://app:app@postgres:5432/oneapi
+      - PYTHONPATH=/app
+      - TESTCONTAINERS_RYUK_DISABLED=true
+      - TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
