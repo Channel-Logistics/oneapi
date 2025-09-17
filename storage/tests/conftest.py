@@ -29,7 +29,7 @@ def client(_integration_db):
 
 
 @pytest_asyncio.fixture
-async def ac(mock_session):
+async def async_client(mock_session):
     """
     In-process FastAPI client with the DB dependency overridden to our mock.
     Useful when we want to drive the route through FastAPI (status codes, etc).

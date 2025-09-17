@@ -10,6 +10,21 @@ version = "0.0.0"
 where = ["."]
 include = ["storage*"]
 
+[tool.pytest.ini_options]
+addopts = "--strict-markers --cov=storage --cov-branch --cov-report=term-missing"
+testpaths = ["storage/tests"]
+python_files = "test_*.py"
+asyncio_mode = "auto"
+markers = [
+    "unit: fast tests with fakes/mocks",
+    "integration: in-proc + Testcontainers",
+    "e2e: live service via HTTP",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:testcontainers.*",
+    "ignore::DeprecationWarning:testcontainers.core.*",
+]
+
 [tool.ruff]
 line-length = 88
 target-version = "py311"
@@ -20,4 +35,3 @@ ignore = ["E501"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
-
