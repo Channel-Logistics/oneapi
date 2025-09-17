@@ -6,11 +6,9 @@ from httpx import AsyncClient, ASGITransport
 from storage.app import create_app
 from storage import db as db_module
 
-
 @pytest.fixture
 def mock_session():
     return MagicMock()
-
 
 @pytest_asyncio.fixture
 async def async_client(mock_session):

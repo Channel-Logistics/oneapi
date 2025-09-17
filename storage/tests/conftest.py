@@ -1,13 +1,12 @@
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport, Client
+from httpx import AsyncClient, ASGITransport
 from fastapi.testclient import TestClient
 
 from unittest.mock import MagicMock
 
 from storage.app import create_app
 from storage import db as db_module
-from storage.routers import events as events_router_mod  # the module we test
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from storage.db import Base
