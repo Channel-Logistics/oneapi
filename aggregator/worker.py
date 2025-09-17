@@ -26,7 +26,7 @@ load_dotenv()
 setup_logging()
 logger = logging.getLogger("Aggregator")
 
-AMQP_URL = os.getenv("AMQP_URL", "amqp://user:pass@rabbitmq:5672")
+AMQP_URL = os.getenv("AMQP_URL")
 
 PROVIDERS = [
     CopernicusProvider(),
@@ -37,6 +37,9 @@ PROVIDERS = [
 
 # --- Helper to publish back into "events" exchange ---
 async def publish_event(ch: aio_pika.Channel, task_id: str, evt: dict, rk: str):
+    """Publish event to the events exchange and always inject taskId."""
+    evt.setdefault("taskId", task_id)
+
     ex = await ch.get_exchange("events")
     body = json.dumps(evt).encode()
     await ex.publish(aio_pika.Message(body=body), routing_key=rk)
@@ -44,7 +47,7 @@ async def publish_event(ch: aio_pika.Channel, task_id: str, evt: dict, rk: str):
 
 # --- Per-provider task runner ---
 async def call_provider(
-    ch: aio_pika.Channel, task_id: str, provider, job_type, request
+    ch: aio_pika.Channel, task_id: str, provider, job_type: str, request: JobRequest
 ):
     # Small artificial delay for testing SSE updates
     await asyncio.sleep(3)
@@ -55,6 +58,7 @@ async def call_provider(
             start_dt = datetime.fromisoformat(request.start_date.replace("Z", "+00:00"))
             end_dt = datetime.fromisoformat(request.end_date.replace("Z", "+00:00"))
             now = datetime.now(timezone.utc)
+
             modes = []
             if end_dt < now:
                 modes.append("archive")
@@ -70,6 +74,7 @@ async def call_provider(
                         request.start_date, request.end_date, request.bbox
                     )
                     key = "features"
+
                 if mode in ["feasibility", "mixed"]:
                     lon = (request.bbox[0] + request.bbox[2]) / 2
                     lat = (request.bbox[1] + request.bbox[3]) / 2
@@ -81,13 +86,13 @@ async def call_provider(
 
                 evt = {
                     "type": "provider.update",
-                    "taskId": task_id,
                     "provider": provider.name,
                     "mode": mode,
                     "status": "ok" if res else "empty",
                 }
                 if res:
                     evt[key] = res
+
                 await publish_event(
                     ch,
                     task_id,
@@ -106,7 +111,6 @@ async def call_provider(
                 )
                 evt = {
                     "type": "provider.update",
-                    "taskId": task_id,
                     "provider": provider.name,
                     "mode": "tasking",
                     "status": "ok",
@@ -122,7 +126,6 @@ async def call_provider(
     except Exception as e:
         evt = {
             "type": "provider.update",
-            "taskId": task_id,
             "provider": provider.name,
             "status": "error",
             "error": str(e),
@@ -139,37 +142,36 @@ async def process_task(ch: aio_pika.Channel, msg: aio_pika.IncomingMessage):
     job_type = payload.get("type", "search")
 
     logger.info(f"📥 Processing {job_type} task {task_id}")
+
     if job_type not in ("search", "task"):
         logger.warning(f"⚠️ Unknown job type {job_type} for task {task_id}")
+
         # Delay to show the user a failed job
         await asyncio.sleep(3)
 
         await publish_event(
             ch,
             task_id,
-            {
-                "type": "task.failed",
-                "taskId": task_id,
-                "error": f"Unknown job type: {job_type}",
-            },
+            {"type": "task.failed", "error": f"Unknown job type: {job_type}"},
             f"task.{task_id}.failed",
         )
         await msg.ack()
         return
+
     # Delay so the client can see the task started event
     await asyncio.sleep(3)
 
     await publish_event(
         ch,
         task_id,
-        {"type": "task.started", "taskId": task_id},
+        {"type": "task.started"},
         f"task.{task_id}.started",
     )
 
     try:
         request = JobRequest(**payload)
 
-        # Run all providers concurrently, each publishing its own updates
+        # Run all providers concurrently
         await asyncio.gather(
             *[call_provider(ch, task_id, p, job_type, request) for p in PROVIDERS]
         )
@@ -177,7 +179,7 @@ async def process_task(ch: aio_pika.Channel, msg: aio_pika.IncomingMessage):
         await publish_event(
             ch,
             task_id,
-            {"type": "task.complete", "taskId": task_id},
+            {"type": "task.complete"},
             f"task.{task_id}.complete",
         )
 
@@ -186,7 +188,7 @@ async def process_task(ch: aio_pika.Channel, msg: aio_pika.IncomingMessage):
         await publish_event(
             ch,
             task_id,
-            {"type": "task.failed", "taskId": task_id, "error": str(e)},
+            {"type": "task.failed", "error": str(e)},
             f"task.{task_id}.failed",
         )
 

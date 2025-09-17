@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import select
-
-from ..db import get_db
-from .. import models
 from contracts import EventCreate, EventRead
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from .. import models
+from ..db import get_db
 
 router = APIRouter(prefix="/orders/{order_id}/events", tags=["events"])
 

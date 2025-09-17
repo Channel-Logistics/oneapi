@@ -17,10 +17,21 @@ python_files = "test_*.py"
 asyncio_mode = "auto"
 markers = [
     "unit: fast tests with fakes/mocks",
-    "integration: in-proc + Testcontainers", 
-    "e2e: live service via HTTP"
+    "integration: in-proc + Testcontainers",
+    "e2e: live service via HTTP",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning:testcontainers.*",
-    "ignore::DeprecationWarning:testcontainers.core.*"
+    "ignore::DeprecationWarning:testcontainers.core.*",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import select
-
-from ..db import get_db
-from .. import models
 from contracts import ProviderCreate, ProviderRead, ProviderUpdate
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from .. import models
+from ..db import get_db
 
 router = APIRouter(prefix="/providers", tags=["providers"])
 
@@ -21,7 +21,9 @@ def list_providers(
 
 @router.post("", response_model=ProviderRead, status_code=201)
 def create_provider(payload: ProviderCreate, db: Session = Depends(get_db)):
-    exists = db.scalar(select(models.Provider).where(models.Provider.slug == payload.slug))
+    exists = db.scalar(
+        select(models.Provider).where(models.Provider.slug == payload.slug)
+    )
     if exists:
         raise HTTPException(status_code=409, detail="slug already exists")
     obj = models.Provider(**payload.model_dump())
@@ -40,7 +42,9 @@ def get_provider(provider_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{provider_id}", response_model=ProviderRead)
-def update_provider(provider_id: str, payload: ProviderUpdate, db: Session = Depends(get_db)):
+def update_provider(
+    provider_id: str, payload: ProviderUpdate, db: Session = Depends(get_db)
+):
     obj = db.get(models.Provider, provider_id)
     if not obj:
         raise HTTPException(status_code=404, detail="provider not found")

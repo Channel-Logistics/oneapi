@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .settings import settings as default_settings
+
 from . import db as db_module
-from .routers import providers, events, order_providers, orders
+from .routers import events, order_providers, orders, providers
+from .settings import settings as default_settings
+
 
 def create_app(
     *,
