@@ -45,7 +45,11 @@ def send_email(subject: str, body: str):
         response = sg.send(message)
         logger.info(f"✅ Email sent: {response.status_code}")
     except Exception as e:
-        logger.error(f"💥 Failed to send email: {e}")
+        if hasattr(e, "body"):
+            logger.error(f"💥 SendGrid error: {e.body}")
+        else:
+            logger.error(f"💥 Failed to send email: {e}")
+        raise
 
 
 async def handle_event(evt: dict):
