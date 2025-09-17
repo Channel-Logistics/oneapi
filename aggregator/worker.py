@@ -1,8 +1,8 @@
 import asyncio
 import json
 import logging
-import os
 from datetime import datetime, timezone
+from functools import lru_cache
 from typing import List
 
 import aio_pika
@@ -11,7 +11,8 @@ from logging_config import setup_logging
 from providers.copernicus import CopernicusProvider
 from providers.planetary_computer import PlanetaryComputerProvider
 from providers.umbra_canopy import UmbraProvider
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings
 
 
 # --- Unified Pydantic model ---
@@ -21,13 +22,20 @@ class JobRequest(BaseModel):
     bbox: List[float]
 
 
+# --- Environment Settings ---
+class Settings(BaseSettings):
+    AMQP_URL: str = Field(..., description="AMQP connection string")
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
 # --- Setup ---
 load_dotenv()
 setup_logging()
 logger = logging.getLogger("Aggregator")
-
-# TODO: Validate env variables
-AMQP_URL = os.getenv("AMQP_URL")
 
 PROVIDERS = [
     CopernicusProvider(),
@@ -198,7 +206,8 @@ async def process_order(ch: aio_pika.Channel, msg: aio_pika.IncomingMessage):
 
 # --- Main loop ---
 async def main():
-    conn = await aio_pika.connect_robust(AMQP_URL)
+    settings = get_settings()
+    conn = await aio_pika.connect_robust(settings.AMQP_URL)
     ch = await conn.channel()
     await ch.set_qos(prefetch_count=5)
 
