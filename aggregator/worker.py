@@ -115,7 +115,7 @@ async def call_provider(
                 lon = (request.bbox[0] + request.bbox[2]) / 2
                 lat = (request.bbox[1] + request.bbox[3]) / 2
                 geometry = {"type": "Point", "coordinates": [lon, lat]}
-                res = await provider.create_order(
+                res = await provider.create_task(
                     request.start_date, request.end_date, geometry
                 )
                 evt = {
