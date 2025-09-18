@@ -58,7 +58,7 @@ async def test_call_provider_search():
     )
     with patch("worker.PROVIDERS", [provider]):
         await call_provider(ch, "order123", provider, "search", req)
-
+        
     # Check at least one provider.update event got published
     assert any("provider.update" in evt["type"] for evt, _ in ch.published)
 
@@ -71,6 +71,6 @@ async def test_process_order_with_unknown_type():
 
     with patch("worker.PROVIDERS", [DummyProvider()]):
         await process_order(ch, msg)
-
+        
     assert msg.acked
     assert any(evt["type"] == "order.failed" for evt, _ in ch.published)
