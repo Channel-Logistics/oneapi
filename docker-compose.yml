@@ -55,11 +55,14 @@ services:
       dockerfile: gateway/Dockerfile
     environment:
       AMQP_URL: ${AMQP_URL:-amqp://user:pass@rabbitmq:5672}
+      STORAGE_URL: ${STORAGE_URL:-http://storage:9000}
     depends_on:
       rabbitmq:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      storage:
+        condition: service_started
     restart: unless-stopped
     ports:
       - "8000:8000"
