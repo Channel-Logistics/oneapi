@@ -12,6 +12,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Notifications")
 
+# TODO: Validate env variables
 AMQP_URL = os.getenv("AMQP_URL")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 EMAIL_FROM = os.getenv("NOTIFY_EMAIL_FROM")
@@ -35,15 +36,15 @@ def send_email(subject: str, body: str):
 
 
 async def handle_event(evt: dict):
-    task_id = evt.get("taskId")
+    order_id = evt.get("orderId")
     evt_type = evt.get("type")
 
-    if evt_type == "task.started":
-        send_email("Task started", f"Task {task_id} has started.")
-    elif evt_type == "task.complete":
-        send_email("Task complete", f"Task {task_id} finished successfully.")
-    elif evt_type == "task.failed":
-        send_email("Task failed", f"Task {task_id} failed: {evt.get('error')}")
+    if evt_type == "order.started":
+        send_email("Order started", f"Order {order_id} has started.")
+    elif evt_type == "order.complete":
+        send_email("Order complete", f"Order {order_id} finished successfully.")
+    elif evt_type == "order.failed":
+        send_email("Order failed", f"Order {order_id} failed: {evt.get('error')}")
 
 
 async def main():
@@ -57,10 +58,10 @@ async def main():
     # Create a queue just for notifications
     q = await ch.declare_queue("notifications", durable=True)
 
-    # Bind to task.*.started, task.*.complete, task.*.failed
-    await q.bind(ex, routing_key="task.*.started")
-    await q.bind(ex, routing_key="task.*.complete")
-    await q.bind(ex, routing_key="task.*.failed")
+    # Bind to order.*.started, order.*.complete, order.*.failed
+    await q.bind(ex, routing_key="order.*.started")
+    await q.bind(ex, routing_key="order.*.complete")
+    await q.bind(ex, routing_key="order.*.failed")
 
     logger.info("📧 Notifications worker started, waiting for orders...")
 
