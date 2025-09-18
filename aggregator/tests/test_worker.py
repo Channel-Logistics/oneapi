@@ -12,7 +12,7 @@ class DummyUmbraProvider:
 
 # Patch before importing worker
 with patch("providers.umbra_canopy.UmbraProvider", DummyUmbraProvider):
-    from worker import JobRequest, call_provider, process_task
+    from worker import JobRequest, call_provider, process_order
 
 
 # --- Dummy classes ---
@@ -57,16 +57,16 @@ async def test_call_provider_search():
         bbox=[0, 0, 1, 1],
     )
     with patch("worker.PROVIDERS", [provider]):
-        await call_provider(ch, "task123", provider, "search", req)
+        await call_provider(ch, "order123", provider, "search", req)
     assert any("provider.update" in evt["type"] for evt, _ in ch.published)
 
 
 @pytest.mark.asyncio(loop_scope="function")
-async def test_process_task_with_unknown_type():
+async def test_process_order_with_unknown_type():
     ch = DummyChannel()
-    payload = {"taskId": "task999", "type": "unknown"}
+    payload = {"orderId": "order999", "type": "unknown"}
     msg = DummyMessage(json.dumps(payload).encode())
     with patch("worker.PROVIDERS", [DummyProvider()]):
-        await process_task(ch, msg)
+        await process_order(ch, msg)
     assert msg.acked
-    assert any(evt["type"] == "task.failed" for evt, _ in ch.published)
+    assert any(evt["type"] == "order.failed" for evt, _ in ch.published)

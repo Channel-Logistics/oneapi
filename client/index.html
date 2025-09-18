@@ -27,15 +27,15 @@
 </head>
 
 <body>
-  <h1>Satellite Task SSE</h1>
-  <button id="start">Create task</button>
+  <h1>Satellite Order SSE</h1>
+  <button id="start">Create order</button>
   <div id="status"></div>
   <div class="log" id="log"></div>
   <script>
     const log = (t) => document.getElementById('log').textContent += t + "\n";
 
     document.getElementById('start').onclick = async () => {
-      const res = await fetch('http://localhost:8000/tasks', {
+      const res = await fetch('http://localhost:8000/orders', {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
           "type": "search",
           "start_date": "2024-01-01T00:00:00Z",
@@ -44,18 +44,18 @@
         })
       });
       const j = await res.json();
-      document.getElementById('status').textContent = `Task: ${j.taskId}`;
+      document.getElementById('status').textContent = `Order: ${j.orderId}`;
       const es = new EventSource(`http://localhost:8000${j.sseUrl}`);
-      es.addEventListener('task.started', e => {
+      es.addEventListener('order.started', e => {
         const data = JSON.parse(e.data);
-        document.getElementById('status').textContent = `Task ${data.taskId} picked up by worker`;
+        document.getElementById('status').textContent = `Order ${data.orderId} picked up by worker`;
         log(`[started] ${e.data}`);
       });
       es.addEventListener('provider.update', e => log(`[provider] ${e.data}`));
-      es.addEventListener('task.complete', e => { log(`[done] ${e.data}`); es.close(); });
-      es.addEventListener('task.failed', e => {
+      es.addEventListener('order.complete', e => { log(`[done] ${e.data}`); es.close(); });
+      es.addEventListener('order.failed', e => {
         const data = JSON.parse(e.data);
-        document.getElementById('status').textContent = `❌ Task ${data.taskId} failed: ${data.error}`;
+        document.getElementById('status').textContent = `❌ Order ${data.orderId} failed: ${data.error}`;
         log(`[failed] ${e.data}`);
         es.close();
       });
