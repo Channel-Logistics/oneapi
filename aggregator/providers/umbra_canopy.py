@@ -1,27 +1,44 @@
 import asyncio
 import logging
-import os
+from functools import lru_cache
 
 import httpx
-from dotenv import load_dotenv
 from logging_config import setup_logging
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from .base import BaseProvider
 
-load_dotenv()
+
+# --- Settings ---
+class UmbraSettings(BaseSettings):
+    url: str = Field(..., alias="UMBRA_URL_SANDBOX", description="Umbra API URL")
+    token: str = Field(..., alias="UMBRA_TOKEN", description="Umbra API token")
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+@lru_cache
+def get_settings() -> UmbraSettings:
+    """Load Umbra settings once (cached)."""
+    return UmbraSettings()
+
+
+# --- Setup ---
 setup_logging()
 logger = logging.getLogger("UmbraProvider")
 
 
+# --- Provider ---
 class UmbraProvider(BaseProvider):
     name = "Umbra"
-    # base_url = os.getenv("UMBRA_URL_PROD")
-    base_url = os.getenv("UMBRA_URL_SANDBOX")
-    token = os.getenv("UMBRA_TOKEN")
 
-    def __init__(self):
-        if not self.token:
-            raise ValueError("Umbra token not provided")
+    def __init__(self, settings: UmbraSettings | None = None):
+        self.settings = settings or get_settings()
+        self.base_url = self.settings.url
+        self.token = self.settings.token
         self.headers = {"Authorization": f"Bearer {self.token}"}
 
     async def search_archive(self, start_date, end_date, bbox, limit=10):

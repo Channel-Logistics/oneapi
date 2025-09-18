@@ -4,18 +4,13 @@ from unittest.mock import patch
 import pytest
 
 
-# --- Dummy UmbraProvider to avoid import errors ---
+# --- Dummy UmbraProvider to avoid real token logic ---
 class DummyUmbraProvider:
     def __init__(self, *args, **kwargs):
         self.name = "Umbra"
 
 
-# Patch before importing worker
-with patch("providers.umbra_canopy.UmbraProvider", DummyUmbraProvider):
-    from worker import JobRequest, call_provider, process_order
-
-
-# --- Dummy classes ---
+# --- Dummy classes for channel and provider ---
 class DummyChannel:
     def __init__(self):
         self.published = []
@@ -46,6 +41,11 @@ class DummyProvider:
         return [{"id": f"fake-feasibility-{start}-{end}-{geometry}"}]
 
 
+# --- Patch UmbraProvider before importing worker ---
+with patch("providers.umbra_canopy.UmbraProvider", DummyUmbraProvider):
+    from worker import JobRequest, call_provider, process_order
+
+
 # --- Tests ---
 @pytest.mark.asyncio(loop_scope="function")
 async def test_call_provider_search():
@@ -58,6 +58,8 @@ async def test_call_provider_search():
     )
     with patch("worker.PROVIDERS", [provider]):
         await call_provider(ch, "order123", provider, "search", req)
+        
+    # Check at least one provider.update event got published
     assert any("provider.update" in evt["type"] for evt, _ in ch.published)
 
 
@@ -66,7 +68,9 @@ async def test_process_order_with_unknown_type():
     ch = DummyChannel()
     payload = {"orderId": "order999", "type": "unknown"}
     msg = DummyMessage(json.dumps(payload).encode())
+
     with patch("worker.PROVIDERS", [DummyProvider()]):
         await process_order(ch, msg)
+        
     assert msg.acked
     assert any(evt["type"] == "order.failed" for evt, _ in ch.published)

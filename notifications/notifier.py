@@ -1,38 +1,55 @@
 import asyncio
 import json
 import logging
-import os
+from functools import lru_cache
 
 import aio_pika
 from dotenv import load_dotenv
+from pydantic import Field
+from pydantic_settings import BaseSettings
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
+
+# --- Environment Settings ---
+class Settings(BaseSettings):
+    AMQP_URL: str = Field(..., description="AMQP connection string")
+    SENDGRID_API_KEY: str = Field(..., description="SendGrid API key")
+    NOTIFY_EMAIL_FROM: str = Field(..., description="Email address to send from")
+    NOTIFY_EMAIL_TO: str = Field(..., description="Email address to send to")
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Load settings once (cached)."""
+    return Settings()
+
+
+# --- Setup ---
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Notifications")
 
-# TODO: Validate env variables
-AMQP_URL = os.getenv("AMQP_URL")
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-EMAIL_FROM = os.getenv("NOTIFY_EMAIL_FROM")
-EMAIL_TO = os.getenv("NOTIFY_EMAIL_TO")
-
 
 def send_email(subject: str, body: str):
     """Send a simple email using SendGrid"""
+    settings = get_settings()
     message = Mail(
-        from_email=EMAIL_FROM,
-        to_emails=EMAIL_TO,
+        from_email=settings.NOTIFY_EMAIL_FROM,
+        to_emails=settings.NOTIFY_EMAIL_TO,
         subject=subject,
         plain_text_content=body,
     )
     try:
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
         response = sg.send(message)
         logger.info(f"✅ Email sent: {response.status_code}")
     except Exception as e:
-        logger.error(f"💥 Failed to send email: {e}")
+        if hasattr(e, "body"):
+            logger.error(f"💥 SendGrid error: {e.body}")
+        else:
+            logger.error(f"💥 Failed to send email: {e}")
+        raise
 
 
 async def handle_event(evt: dict):
@@ -48,7 +65,8 @@ async def handle_event(evt: dict):
 
 
 async def main():
-    conn = await aio_pika.connect_robust(AMQP_URL)
+    settings = get_settings()
+    conn = await aio_pika.connect_robust(settings.AMQP_URL)
     ch = await conn.channel()
     await ch.set_qos(prefetch_count=10)
 
