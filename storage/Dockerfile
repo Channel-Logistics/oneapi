@@ -5,6 +5,9 @@ WORKDIR /app
 COPY storage/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY storage/requirements-test.txt ./requirements-test.txt
+RUN pip install --no-cache-dir -r requirements-test.txt
+
 # DTOs contracts
 COPY packages/oneapi-contracts /app/packages/oneapi-contracts
 RUN pip install -e /app/packages/oneapi-contracts
