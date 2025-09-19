@@ -21,7 +21,7 @@ class Messaging:
         if channel is None:
             raise RuntimeError("Messaging.start: channel not initialized")
         await channel.declare_exchange(
-            "tasks", aio_pika.ExchangeType.DIRECT, durable=True
+            "orders", aio_pika.ExchangeType.DIRECT, durable=True
         )
         await channel.declare_exchange(
             "events", aio_pika.ExchangeType.TOPIC, durable=True
@@ -35,7 +35,8 @@ class Messaging:
         channel = self._channel
         if channel is None:
             raise RuntimeError("Messaging not started: channel is None")
-        ex = await channel.get_exchange("tasks")
+        ex = await channel.get_exchange("orders")
+        print(ex)
         body = json.dumps({"orderId": order_id, **payload}).encode()
         await ex.publish(
             aio_pika.Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
