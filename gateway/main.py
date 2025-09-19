@@ -2,10 +2,9 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from .routes.orders import router as orders_router
-from .services.messaging import Messaging
-from .services.storage import StorageClient
+from routes.orders import router as orders_router
+from services.messaging import Messaging
+from services.storage import StorageClient
 
 AMQP_URL = os.getenv("AMQP_URL", "amqp://user:pass@rabbitmq:5672")
 STORAGE_URL = os.getenv("STORAGE_URL", "http://storage:9000")

@@ -8,8 +8,7 @@ import pytest
 from contracts import OrderCreate
 from fastapi.testclient import TestClient
 from main import app
-
-from gateway.services.storage import StorageClient
+from services.storage import StorageClient
 
 
 @pytest.fixture
