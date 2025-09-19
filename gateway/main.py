@@ -1,22 +1,18 @@
-import os
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.orders import router as orders_router
 from services.messaging import Messaging
 from services.storage import StorageClient
+from settings import get_settings
 
-AMQP_URL = os.getenv("AMQP_URL", "amqp://user:pass@rabbitmq:5672")
-STORAGE_URL = os.getenv("STORAGE_URL", "http://storage:9000")
+settings = get_settings()
+AMQP_URL = settings.amqp_url
+STORAGE_URL = str(settings.storage_url)
 
 
 app = FastAPI(title="Gateway - Orders + SSE")
 
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://0.0.0.0:3000",
-]
+ALLOWED_ORIGINS = settings.cors_allowed_origins
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +28,7 @@ async def startup():
     app.state.messaging = Messaging(AMQP_URL)
     await app.state.messaging.start()
     app.state.storage = StorageClient(STORAGE_URL)
+    app.state.settings = settings
 
 
 @app.on_event("shutdown")
@@ -48,6 +45,10 @@ def get_messaging():
 
 def get_storage():
     return app.state.storage
+
+
+def get_settings_dep():
+    return app.state.settings
 
 
 app.include_router(orders_router)

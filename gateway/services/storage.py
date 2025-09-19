@@ -9,7 +9,7 @@ class StorageClient:
         self.client = httpx.AsyncClient(timeout=timeout_seconds)
 
     async def create_order(self, order: OrderCreate) -> dict:
-        payload = order.model_dump()
+        payload = order.model_dump(mode="json")
         try:
             resp = await self.client.post(f"{self.base_url}/orders", json=payload)
             resp.raise_for_status()

@@ -4,13 +4,14 @@ import uuid
 from typing import AsyncIterator, Optional
 
 import aio_pika
+from aio_pika.abc import AbstractChannel, AbstractRobustConnection
 
 
 class Messaging:
     def __init__(self, amqp_url: str):
         self.amqp_url = amqp_url
-        self._conn: Optional[aio_pika.RobustConnection] = None
-        self._channel: Optional[aio_pika.Channel] = None
+        self._conn: Optional[AbstractRobustConnection] = None
+        self._channel: Optional[AbstractChannel] = None
 
     async def start(self):
         conn = await aio_pika.connect_robust(self.amqp_url)
