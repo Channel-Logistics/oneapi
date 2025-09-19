@@ -1,22 +1,18 @@
-import asyncio
-import json
-import os
-import uuid
-
-import aio_pika
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sse_starlette.sse import EventSourceResponse
+from routes.orders import router as orders_router
+from services.messaging import Messaging
+from services.storage import StorageClient
+from settings import get_settings
 
-AMQP_URL = os.getenv("AMQP_URL", "amqp://user:pass@rabbitmq:5672")
+settings = get_settings()
+AMQP_URL = settings.amqp_url
+STORAGE_URL = str(settings.storage_url)
 
-app = FastAPI(title="Gateway SSE + RabbitMQ")
 
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://0.0.0.0:3000",
-]
+app = FastAPI(title="Gateway - Orders + SSE")
+
+ALLOWED_ORIGINS = settings.cors_allowed_origins
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,119 +21,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Keep one shared connection/channel
-amqp_conn: aio_pika.RobustConnection
-amqp_channel: aio_pika.Channel
 
 
 @app.on_event("startup")
 async def startup():
-    global amqp_conn, amqp_channel
-    amqp_conn = await aio_pika.connect_robust(AMQP_URL)
-    amqp_channel = await amqp_conn.channel()
-    # declare exchanges (idempotent)
-    await amqp_channel.declare_exchange(
-        "orders", aio_pika.ExchangeType.DIRECT, durable=True
-    )
-    await amqp_channel.declare_exchange(
-        "events", aio_pika.ExchangeType.TOPIC, durable=True
-    )
+    app.state.messaging = Messaging(AMQP_URL)
+    await app.state.messaging.start()
+    app.state.storage = StorageClient(STORAGE_URL)
+    app.state.settings = settings
 
 
 @app.on_event("shutdown")
 async def shutdown():
-    if amqp_conn:
-        await amqp_conn.close()
+    if getattr(app.state, "messaging", None):
+        await app.state.messaging.stop()
+    if getattr(app.state, "storage", None):
+        await app.state.storage.close()
 
 
-async def publish_order(order_id: str, payload: dict):
-    ex = await amqp_channel.get_exchange("orders")
-    body = json.dumps({"orderId": order_id, **payload}).encode()
-    await ex.publish(
-        aio_pika.Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
-        routing_key="search",
-    )
+def get_messaging():
+    return app.state.messaging
 
 
-@app.post("/orders")
-async def create_order(body: dict, bg: BackgroundTasks):
-    order_id = str(uuid.uuid4())
-    bg.add_task(publish_order, order_id, body)
-    return {"orderId": order_id, "sseUrl": f"/orders/{order_id}/events"}
+def get_storage():
+    return app.state.storage
 
 
-@app.get("/orders/{order_id}/events")
-async def sse(order_id: str):
-    ex = await amqp_channel.get_exchange("events")
+def get_settings_dep():
+    return app.state.settings
 
-    # exclusive, auto-delete queue for this SSE connection
-    queue = await amqp_channel.declare_queue(
-        name=f"sse-{order_id}-{uuid.uuid4().hex}",
-        exclusive=True,
-        auto_delete=True,
-        durable=False,
-    )
 
-    await queue.bind(ex, routing_key=f"order.{order_id}.#")
-
-    # in-process mailbox from RMQ -> SSE
-    inbox: asyncio.Queue[dict] = asyncio.Queue()
-    stop = asyncio.Event()
-
-    async def pump_from_rmq():
-        try:
-            async with queue.iterator() as qit:
-                async for rmq in qit:
-                    async with rmq.process():
-                        try:
-                            evt = json.loads(rmq.body)
-                        except Exception:
-                            evt = {
-                                "type": "update",
-                                "raw": rmq.body.decode("utf-8", "ignore"),
-                            }
-                        await inbox.put(evt)
-                        # after completion, enqueue sentinel then stop the pump
-                        if evt.get("type") in ("order.complete", "order.failed"):
-                            await inbox.put({"type": "__end__"})
-                            break
-        finally:
-            stop.set()
-
-    pump_order = asyncio.create_task(pump_from_rmq())
-
-    # await inbox.put({"type": "order.started", "orderId": order_id})
-
-    async def event_gen():
-        try:
-            while True:
-                evt = await inbox.get()
-                if evt.get("type") == "__end__":
-                    # we stop yielding; client should close the EventSource
-                    break
-                # Map evt to SSE {event, data}
-                yield {
-                    "event": evt.get("type", "provider.update"),
-                    "data": json.dumps(evt),
-                }
-        finally:
-            try:
-                await queue.unbind(ex, routing_key=f"order.{order_id}.#")
-            except Exception:
-                pass
-            try:
-                await queue.delete(if_unused=False, if_empty=False)
-            except Exception:
-                pass
-            pump_order.cancel()
-
-    # EventSourceResponse sends heartbeats automatically (default ping=15s)
-    resp = EventSourceResponse(event_gen(), ping=15)
-    # Helpful headers for proxies
-    resp.headers["Cache-Control"] = "no-cache"
-    resp.headers["Connection"] = "keep-alive"
-    resp.headers["X-Accel-Buffering"] = "no"
-    return resp
+app.include_router(orders_router)
 
 
 @app.get("/health")
